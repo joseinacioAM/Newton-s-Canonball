@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canhão de Newton</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        canvas { display: block; background-color: #000; }
+        .controls {
+            position: absolute; top: 10px; left: 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 10px; border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="controls">
+        <h2>Canhão de Newton</h2>
+        <div>
+            <label>Velocidade inicial: <span id="velocityValue">10.0</span></label>
+            <input type="range" id="velocity" min="1" max="60" step="0.1" value="10">
+        </div>
+        <button id="fire">Disparar</button>
+        <button id="reset">Resetar</button>
+        <div>
+            <input type="checkbox" id="showTrail" checked>
+            <label for="showTrail">Mostrar trajetória</label>
+        </div>
+        <div>Estado: <span id="state">Pronto</span></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const velocitySlider = document.getElementById('velocity');
+        const velocityValue = document.getElementById('velocityValue');
+        const stateSpan = document.getElementById('state');
+
+        // Configuração inicial
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const center = { x: canvas.width/2, y: canvas.height/2 };
+        const earthRadius = Math.min(canvas.width, canvas.height) * 0.3;
+        const cannonLength = earthRadius * 0.2;
+        
+        // Parâmetros físicos ajustados
+        const G = 6.67430e-5; // Constante gravitacional ajustada
+        const earthMass = 5.972e10; // Massa ajustada
+        const timeStep = 0.01; // Passo de tempo menor para maior precisão
+
+        let projectile = null;
+        let trail = [];
+        let animId = null;
+
+        function drawEarth() {
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, earthRadius, 0, Math.PI*2);
+            ctx.fillStyle = '#1a66ff';
+            ctx.fill();
+            
+            // Canhão
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y - earthRadius);
+            ctx.lineTo(center.x, center.y - earthRadius - cannonLength);
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = '#777';
+            ctx.stroke();
+        }
+
+        function fire() {
+            if (animId) cancelAnimationFrame(animId);
+            
+            const velocity = parseFloat(velocitySlider.value);
+            velocityValue.textContent = velocity.toFixed(1);
+            stateSpan.textContent = "Em movimento";
+            
+            projectile = {
+                x: center.x,
+                y: center.y - earthRadius - cannonLength - 10,
+                vx: velocity,
+                vy: 0,
+                radius: 6
+            };
+            
+            trail = [];
+            animate();
+        }
+
+        function update(dt) {
+            const dx = projectile.x - center.x;
+            const dy = projectile.y - center.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist < earthRadius + projectile.radius) {
+                stateSpan.textContent = "Colidiu!";
+                return false;
+            }
+            
+            // Força gravitacional (versão simplificada)
+            const force = G * earthMass / (dist*dist);
+            const fx = -force * dx/dist;
+            const fy = -force * dy/dist;
+            
+            projectile.vx += fx * dt;
+            projectile.vy += fy * dt;
+            projectile.x += projectile.vx * dt * 20;
+            projectile.y += projectile.vy * dt * 20;
+            
+            if (document.getElementById('showTrail').checked) {
+                trail.push({x: projectile.x, y: projectile.y});
+                if (trail.length > 500) trail.shift();
+            }
+            
+            return true;
+        }
+
+        function animate() {
+            if (!update(timeStep)) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawEarth();
+            
+            // Trilha
+            if (trail.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(trail[0].x, trail[0].y);
+                for (let i = 1; i < trail.length; i++) {
+                    ctx.lineTo(trail[i].x, trail[i].y);
+                }
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            // Projétil
+            ctx.beginPath();
+            ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI*2);
+            ctx.fillStyle = '#ff5555';
+            ctx.fill();
+            
+            animId = requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        document.getElementById('fire').addEventListener('click', fire);
+        document.getElementById('reset').addEventListener('click', () => {
+            if (animId) cancelAnimationFrame(animId);
+            projectile = null;
+            trail = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawEarth();
+            stateSpan.textContent = "Pronto";
+        });
+        
+        velocitySlider.addEventListener('input', () => {
+            velocityValue.textContent = velocitySlider.value;
+        });
+
+        // Iniciar
+        drawEarth();
+    </script>
+</body>
+</html>
