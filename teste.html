@@ -42,9 +42,9 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         const center = { x: canvas.width/2, y: canvas.height/2 };
-        const earthRadius = Math.min(canvas.width, canvas.height) * 0.3;
+        const earthRadius = Math.min(canvas.width, canvas.height) * 0.15; // Reduzido de 0.3 para 0.15
         const cannonLength = earthRadius * 0.2;
-        
+
         // Parâmetros físicos ajustados
         const G = 6.67430e-5; // Constante gravitacional ajustada
         const earthMass = 5.972e10; // Massa ajustada
